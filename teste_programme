@@ -1,0 +1,61 @@
+#!/bin/sh
+perform_test() {
+    if [ -n "$2" ]
+    then
+        echo "Test de $1 avec $2 comme argument : "
+        name=$1_$(basename $file .txt | cut -d'_' -f2-)
+        arg=$2
+    else
+        echo "Test de $1 : "
+        name=$1
+    fi
+    ./$1 $arg $name.output 2>/dev/null 1>&2
+    if [ $generate -gt 0 ]
+    then
+        if [ ! -f $name.result ]
+        then
+            cp $name.output $name.result
+            echo generated $name.result
+        elif ! diff -q $name.result $name.output >/dev/null
+        then
+            cp $name.output $name.result
+            echo regenerated outdated $name.result
+        else
+            echo $name.result up to date, nothing to do
+        fi
+    else
+        if [ ! -f $name.result ]
+        then
+            echo fichier $name.result absent, je ne peux verifier les resultats
+            exit 1
+        fi
+        if diff -q $name.output $name.result >/dev/null
+        then
+            echo "SUCCES"
+        else
+            echo "ECHEC, vérifiez votre programme ou utilisez le debugger"
+            exit 1
+        fi
+    fi
+}
+
+if [ $1 = '--generate_results' ]
+then
+    generate=1
+    shift
+else
+    generate=0
+fi
+type=$(echo $1 | cut -d'_' -f2)
+files=$(ls ${type}*.txt 2>/dev/null)
+if [ -n "$files" ]
+then
+    for file in $files
+    do
+        perform_test $1 $file
+    done
+else
+    perform_test $1
+fi
+
+exit 0
